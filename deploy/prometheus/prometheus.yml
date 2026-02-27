@@ -1,0 +1,33 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # API Gateway metrics
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['api-gateway:8080']
+    metrics_path: /metrics
+
+  # Equipment Service metrics
+  - job_name: 'equipment-api'
+    static_configs:
+      - targets: ['equipment-api:8080']
+    metrics_path: /metrics
+
+  # Metrics Service metrics
+  - job_name: 'metrics-api'
+    static_configs:
+      - targets: ['metrics-api:8080']
+    metrics_path: /metrics
+
+  # RabbitMQ metrics (via management plugin)
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['rabbitmq:15692']
+    metrics_path: /metrics
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

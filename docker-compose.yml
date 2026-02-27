@@ -1,0 +1,167 @@
+services:
+  # ============================================
+  # Infrastructure
+  # ============================================
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64      # SQL Server requires x86 emulation on Apple Silicon
+    container_name: smartfactory-sqlserver
+    environment:
+      SA_PASSWORD: "YourStrong!Passw0rd"
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1434:1433"            # 1434 externally (1433 is used by kpi-sql)
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    networks:
+      - smartfactory
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong!Passw0rd' -C -Q 'SELECT 1' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+      start_period: 60s
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: smartfactory-rabbitmq
+    ports:
+      - "5672:5672"     # AMQP
+      - "15672:15672"   # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - smartfactory
+    healthcheck:
+      test: rabbitmq-diagnostics -q check_running
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: smartfactory-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=30d'
+    networks:
+      - smartfactory
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: smartfactory-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/service-health.json
+    volumes:
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - smartfactory
+
+  # ============================================
+  # API Gateway
+  # ============================================
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: src/ApiGateway/ApiGateway/Dockerfile
+    container_name: smartfactory-gateway
+    ports:
+      - "5100:8080"            # 5100 externally (5000 is used by macOS ControlCenter)
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    depends_on:
+      equipment-api:
+        condition: service_started
+      metrics-api:
+        condition: service_started
+    networks:
+      - smartfactory
+
+  # ============================================
+  # Microservices
+  # ============================================
+
+  equipment-api:
+    build:
+      context: .
+      dockerfile: src/Services/Equipment/Equipment.API/Dockerfile
+    container_name: smartfactory-equipment-api
+    ports:
+      - "5001:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__EquipmentDb=Server=sqlserver,1433;Database=SmartFactory_Equipment;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+      - RabbitMQ__Host=rabbitmq
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - smartfactory
+
+  metrics-api:
+    build:
+      context: .
+      dockerfile: src/Services/Metrics/Metrics.API/Dockerfile
+    container_name: smartfactory-metrics-api
+    ports:
+      - "5002:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__MetricsDb=Server=sqlserver,1433;Database=SmartFactory_Metrics;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+      - RabbitMQ__Host=rabbitmq
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - smartfactory
+
+  simulator:
+    build:
+      context: .
+      dockerfile: src/Services/Simulator/Simulator.Service/Dockerfile
+    container_name: smartfactory-simulator
+    environment:
+      - Simulator__IntervalSeconds=10
+      - Simulator__MetricsApiUrl=http://metrics-api:8080
+    depends_on:
+      metrics-api:
+        condition: service_started
+    networks:
+      - smartfactory
+
+# ============================================
+# Volumes & Networks
+# ============================================
+
+volumes:
+  sqlserver-data:
+  rabbitmq-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  smartfactory:
+    driver: bridge
