@@ -138,6 +138,64 @@ services:
     networks:
       - smartfactory
 
+  alert-api:
+    build:
+      context: .
+      dockerfile: src/Services/Alert/Alert.API/Dockerfile
+    container_name: smartfactory-alert-api
+    ports:
+      - "5003:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__AlertDb=Server=sqlserver,1433;Database=SmartFactory_Alerts;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+      - RabbitMQ__Host=rabbitmq
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - smartfactory
+
+  notification-api:
+    build:
+      context: .
+      dockerfile: src/Services/Notification/Notification.API/Dockerfile
+    container_name: smartfactory-notification-api
+    ports:
+      - "5004:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__NotificationDb=Server=sqlserver,1433;Database=SmartFactory_Notifications;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+      - RabbitMQ__Host=rabbitmq
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - smartfactory
+
+  identity-api:
+    build:
+      context: .
+      dockerfile: src/Services/Identity/Identity.API/Dockerfile
+    container_name: smartfactory-identity-api
+    ports:
+      - "5005:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__IdentityDb=Server=sqlserver,1433;Database=SmartFactory_Identity;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+      - Jwt__SecretKey=SmartFactory_SuperSecret_JWT_Key_2026_MustBe32Chars!
+      - Jwt__Issuer=SmartFactoryHub
+      - Jwt__Audience=SmartFactoryHub
+      - Jwt__ExpiryMinutes=480
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - smartfactory
+
   simulator:
     build:
       context: .

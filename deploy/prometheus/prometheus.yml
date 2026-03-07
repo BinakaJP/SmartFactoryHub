@@ -27,6 +27,24 @@ scrape_configs:
       - targets: ['rabbitmq:15692']
     metrics_path: /metrics
 
+  # Alert Service metrics
+  - job_name: 'alert-api'
+    static_configs:
+      - targets: ['alert-api:8080']
+    metrics_path: /metrics
+
+  # Notification Service metrics
+  - job_name: 'notification-api'
+    static_configs:
+      - targets: ['notification-api:8080']
+    metrics_path: /metrics
+
+  # Identity Service metrics
+  - job_name: 'identity-api'
+    static_configs:
+      - targets: ['identity-api:8080']
+    metrics_path: /metrics
+
   # Prometheus self-monitoring
   - job_name: 'prometheus'
     static_configs:
