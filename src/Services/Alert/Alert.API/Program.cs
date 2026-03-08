@@ -20,7 +20,9 @@ builder.Services.AddScoped<IAlertService, AlertService>();
 
 // RabbitMQ event bus (from BuildingBlocks.Common)
 var rabbitHost = builder.Configuration.GetValue<string>("RabbitMQ:Host") ?? "localhost";
-builder.Services.AddRabbitMqEventBus(rabbitHost);
+var rabbitUser = builder.Configuration.GetValue<string>("RabbitMQ:Username") ?? "guest";
+var rabbitPass = builder.Configuration.GetValue<string>("RabbitMQ:Password") ?? "guest";
+builder.Services.AddRabbitMqEventBus(rabbitHost, rabbitUser, rabbitPass);
 
 // Background consumer — listens for MetricThresholdBreachedEvent
 builder.Services.AddHostedService<MetricThresholdBreachedConsumer>();

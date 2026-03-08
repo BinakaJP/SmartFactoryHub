@@ -2,6 +2,7 @@ using BuildingBlocks.Common.Events;
 using BuildingBlocks.Common.Messaging;
 using Metrics.API.Data;
 using Metrics.API.DTOs;
+using Metrics.API.Instrumentation;
 using Metrics.API.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -34,6 +35,18 @@ public class MetricsService : IMetricsService
         _context.MetricDataPoints.Add(dataPoint);
         await _context.SaveChangesAsync();
 
+        // Increment custom Prometheus counters
+        FactoryMetrics.MetricsIngestTotal.WithLabels(dto.EquipmentId, dto.MetricType).Inc();
+        FactoryMetrics.DbWritesTotal.Inc();
+
+        // Update gauge with latest observed value (powers the Grafana equipment metrics dashboard)
+        var equipmentName = FactoryMetrics.KnownEquipmentNames.TryGetValue(dto.EquipmentId, out var knownName)
+            ? knownName
+            : dto.EquipmentId[..8];
+        FactoryMetrics.EquipmentMetricValue
+            .WithLabels(dto.EquipmentId, equipmentName, dto.MetricType, dto.Unit ?? string.Empty)
+            .Set(dto.Value);
+
         // Check thresholds and publish events if breached
         await CheckThresholdsAsync(dataPoint);
 
@@ -64,6 +77,10 @@ public class MetricsService : IMetricsService
             var result = await IngestAsync(dto);
             results.Add(result);
         }
+
+        // Increment batch counter once per batch request
+        FactoryMetrics.MetricsIngestBatchTotal.Inc();
+
         return results;
     }
 
@@ -159,6 +176,9 @@ public class MetricsService : IMetricsService
             : dataPoint.Value <= threshold.CriticalValue;
 
         var severity = isCritical ? "Critical" : "Warning";
+
+        // Increment threshold breach counter
+        FactoryMetrics.ThresholdBreachesTotal.WithLabels(dataPoint.EquipmentId, dataPoint.MetricType, severity).Inc();
 
         try
         {

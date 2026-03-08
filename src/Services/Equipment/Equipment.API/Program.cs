@@ -19,7 +19,9 @@ builder.Services.AddScoped<IEquipmentService, EquipmentService>();
 
 // RabbitMQ event bus (from BuildingBlocks.Common)
 var rabbitHost = builder.Configuration.GetValue<string>("RabbitMQ:Host") ?? "localhost";
-builder.Services.AddRabbitMqEventBus(rabbitHost);
+var rabbitUser = builder.Configuration.GetValue<string>("RabbitMQ:Username") ?? "guest";
+var rabbitPass = builder.Configuration.GetValue<string>("RabbitMQ:Password") ?? "guest";
+builder.Services.AddRabbitMqEventBus(rabbitHost, rabbitUser, rabbitPass);
 
 // Controllers + Swagger — enums serialized as strings (e.g. "Running" not 2)
 builder.Services.AddControllers()

@@ -1,0 +1,658 @@
+{
+  "uid": "equipment-metrics",
+  "title": "Equipment Metrics",
+  "description": "Real-time equipment performance — OEE, Throughput, Temperature, Yield Rate, Power Consumption, Vibration",
+  "tags": ["equipment", "factory", "production"],
+  "timezone": "browser",
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "version": 1,
+  "graphTooltip": 1,
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "annotations": { "list": [] },
+  "links": [
+    {
+      "title": "Service Health",
+      "url": "/d/smartfactory-health",
+      "type": "dashboards",
+      "icon": "external link",
+      "tooltip": "Open Service Health dashboard"
+    }
+  ],
+  "panels": [
+
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Fleet Avg OEE",
+      "description": "Average Overall Equipment Effectiveness across all active equipment",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 60 },
+              { "color": "yellow", "value": 70 },
+              { "color": "green", "value": 80 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "avg(equipment_metric_value{metric_type=\"OEE\"})",
+          "legendFormat": "Avg OEE",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Fleet Avg Yield Rate",
+      "description": "Average yield rate across all active equipment",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 88 },
+              { "color": "yellow", "value": 93 },
+              { "color": "green", "value": 95 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "avg(equipment_metric_value{metric_type=\"YieldRate\"})",
+          "legendFormat": "Avg Yield",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Total Fleet Throughput",
+      "description": "Sum of throughput across all equipment (units/hr)",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "displayName": "units/hr",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(equipment_metric_value{metric_type=\"Throughput\"})",
+          "legendFormat": "Total",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Threshold Breaches (1h)",
+      "description": "Total threshold breaches detected in the last hour",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "orange", "value": 10 },
+              { "color": "red", "value": 25 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(metrics_threshold_breaches_total[1h]))",
+          "legendFormat": "Breaches",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Production Performance",
+      "collapsed": false,
+      "gridPos": { "x": 0, "y": 4, "w": 24, "h": 1 }
+    },
+
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "OEE per Equipment (%)",
+      "description": "Overall Equipment Effectiveness over time. Target: ≥80%",
+      "gridPos": { "x": 0, "y": 5, "w": 12, "h": 8 },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "min": 0,
+          "max": 100,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 60 },
+              { "color": "yellow", "value": 70 },
+              { "color": "green", "value": 80 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "equipment_metric_value{metric_type=\"OEE\"}",
+          "legendFormat": "{{equipment_name}}",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Yield Rate per Equipment (%)",
+      "description": "Production yield rate over time. Target: ≥95%",
+      "gridPos": { "x": 12, "y": 5, "w": 12, "h": 8 },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "min": 80,
+          "max": 100,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 88 },
+              { "color": "yellow", "value": 93 },
+              { "color": "green", "value": 95 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "equipment_metric_value{metric_type=\"YieldRate\"}",
+          "legendFormat": "{{equipment_name}}",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 20,
+      "type": "row",
+      "title": "Throughput",
+      "collapsed": false,
+      "gridPos": { "x": 0, "y": 13, "w": 24, "h": 1 }
+    },
+
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Throughput per Equipment (units/hr)",
+      "description": "Production throughput for each equipment unit over time",
+      "gridPos": { "x": 0, "y": 14, "w": 24, "h": 8 },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "equipment_metric_value{metric_type=\"Throughput\"}",
+          "legendFormat": "{{equipment_name}}",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 30,
+      "type": "row",
+      "title": "Equipment Health",
+      "collapsed": false,
+      "gridPos": { "x": 0, "y": 22, "w": 24, "h": 1 }
+    },
+
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Temperature per Equipment (°C)",
+      "description": "Equipment operating temperature. Warning: 350°C | Critical: 400°C",
+      "gridPos": { "x": 0, "y": 23, "w": 12, "h": 8 },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "decimals": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false,
+            "thresholdsStyle": { "mode": "line+area" }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 300 },
+              { "color": "orange", "value": 350 },
+              { "color": "red", "value": 400 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "equipment_metric_value{metric_type=\"Temperature\"}",
+          "legendFormat": "{{equipment_name}}",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 32,
+      "type": "timeseries",
+      "title": "Vibration per Equipment (mm/s)",
+      "description": "Equipment vibration level. Warning: 2.5 mm/s | Critical: 3.0 mm/s",
+      "gridPos": { "x": 12, "y": 23, "w": 12, "h": 8 },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "velocitymms",
+          "decimals": 2,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false,
+            "thresholdsStyle": { "mode": "line+area" }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 2.5 },
+              { "color": "red", "value": 3.0 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "equipment_metric_value{metric_type=\"Vibration\"}",
+          "legendFormat": "{{equipment_name}}",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 40,
+      "type": "row",
+      "title": "Energy",
+      "collapsed": false,
+      "gridPos": { "x": 0, "y": 31, "w": 24, "h": 1 }
+    },
+
+    {
+      "id": 41,
+      "type": "timeseries",
+      "title": "Power Consumption per Equipment (kWh)",
+      "description": "Electrical power consumption for each equipment unit",
+      "gridPos": { "x": 0, "y": 32, "w": 24, "h": 8 },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatth",
+          "decimals": 1,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 70,
+            "lineWidth": 1,
+            "barAlignment": 0,
+            "stacking": { "mode": "none", "group": "A" }
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "equipment_metric_value{metric_type=\"PowerConsumption\"}",
+          "legendFormat": "{{equipment_name}}",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 50,
+      "type": "row",
+      "title": "Alert Activity",
+      "collapsed": false,
+      "gridPos": { "x": 0, "y": 40, "w": 24, "h": 1 }
+    },
+
+    {
+      "id": 51,
+      "type": "timeseries",
+      "title": "Threshold Breaches by Severity",
+      "description": "Count of threshold breaches per 5-minute window, by severity",
+      "gridPos": { "x": 0, "y": 41, "w": 12, "h": 8 },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "barAlignment": 0
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": ".*Critical.*" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": ".*Warning.*" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "expr": "sum by (equipment_name, severity) (increase(metrics_threshold_breaches_total[5m]))",
+          "legendFormat": "{{equipment_name}} — {{severity}}",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 52,
+      "type": "timeseries",
+      "title": "Data Ingest Rate (points/sec)",
+      "description": "Rate of metric data points being ingested per equipment and metric type",
+      "gridPos": { "x": 12, "y": 41, "w": 12, "h": 8 },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 3,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 5,
+            "pointSize": 4,
+            "showPoints": "never"
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (equipment_name, metric_type) (rate(metrics_ingest_total[1m]))",
+          "legendFormat": "{{equipment_name}} — {{metric_type}}",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 60,
+      "type": "row",
+      "title": "Current Equipment State",
+      "collapsed": false,
+      "gridPos": { "x": 0, "y": 49, "w": 24, "h": 1 }
+    },
+
+    {
+      "id": 61,
+      "type": "bargauge",
+      "title": "Current OEE (%)",
+      "description": "Latest OEE value per equipment. Green ≥80%, Yellow ≥70%, Red <60%",
+      "gridPos": { "x": 0, "y": 50, "w": 8, "h": 8 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "minVizWidth": 0,
+        "minVizHeight": 16
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 60 },
+              { "color": "yellow", "value": 70 },
+              { "color": "green", "value": 80 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "equipment_metric_value{metric_type=\"OEE\"}",
+          "legendFormat": "{{equipment_name}}",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+
+    {
+      "id": 62,
+      "type": "bargauge",
+      "title": "Current Temperature (°C)",
+      "description": "Latest temperature reading per equipment. Warning: 350°C | Critical: 400°C",
+      "gridPos": { "x": 8, "y": 50, "w": 8, "h": 8 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "minVizWidth": 0,
+        "minVizHeight": 16
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "decimals": 1,
+          "min": 0,
+          "max": 500,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 300 },
+              { "color": "orange", "value": 350 },
+              { "color": "red", "value": 400 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "equipment_metric_value{metric_type=\"Temperature\"}",
+          "legendFormat": "{{equipment_name}}",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+
+    {
+      "id": 63,
+      "type": "bargauge",
+      "title": "Current Vibration (mm/s)",
+      "description": "Latest vibration reading per equipment. Warning: 2.5 | Critical: 3.0 mm/s",
+      "gridPos": { "x": 16, "y": 50, "w": 8, "h": 8 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "minVizWidth": 0,
+        "minVizHeight": 16
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "velocitymms",
+          "decimals": 2,
+          "min": 0,
+          "max": 4,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 2.5 },
+              { "color": "red", "value": 3.0 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "equipment_metric_value{metric_type=\"Vibration\"}",
+          "legendFormat": "{{equipment_name}}",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    }
+
+  ]
+}

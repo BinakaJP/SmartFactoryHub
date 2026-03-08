@@ -14,7 +14,9 @@ builder.Services.AddDbContext<MetricsDbContext>(options =>
 builder.Services.AddScoped<IMetricsService, MetricsService>();
 
 var rabbitHost = builder.Configuration.GetValue<string>("RabbitMQ:Host") ?? "localhost";
-builder.Services.AddRabbitMqEventBus(rabbitHost);
+var rabbitUser = builder.Configuration.GetValue<string>("RabbitMQ:Username") ?? "guest";
+var rabbitPass = builder.Configuration.GetValue<string>("RabbitMQ:Password") ?? "guest";
+builder.Services.AddRabbitMqEventBus(rabbitHost, rabbitUser, rabbitPass);
 
 builder.Services.AddControllers()
     .AddJsonOptions(opts =>

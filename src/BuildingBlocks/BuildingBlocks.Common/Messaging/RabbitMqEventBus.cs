@@ -15,14 +15,22 @@ public class RabbitMqEventBus : IEventBus, IAsyncDisposable
 {
     private readonly ILogger<RabbitMqEventBus> _logger;
     private readonly string _hostName;
+    private readonly string _userName;
+    private readonly string _password;
     private readonly string _exchangeName = "smartfactory_events";
     private IConnection? _connection;
     private IChannel? _channel;
 
-    public RabbitMqEventBus(ILogger<RabbitMqEventBus> logger, string hostName = "localhost")
+    public RabbitMqEventBus(
+        ILogger<RabbitMqEventBus> logger,
+        string hostName = "localhost",
+        string userName = "guest",
+        string password = "guest")
     {
         _logger = logger;
         _hostName = hostName;
+        _userName = userName;
+        _password = password;
     }
 
     private async Task EnsureConnectionAsync(CancellationToken cancellationToken)
@@ -33,8 +41,8 @@ public class RabbitMqEventBus : IEventBus, IAsyncDisposable
         var factory = new ConnectionFactory
         {
             HostName = _hostName,
-            UserName = "guest",
-            Password = "guest",
+            UserName = _userName,
+            Password = _password,
             AutomaticRecoveryEnabled = true
         };
 

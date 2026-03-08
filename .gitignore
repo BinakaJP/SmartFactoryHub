@@ -46,11 +46,19 @@ docker-compose.override.yml
 Thumbs.db
 
 ## Secrets (NEVER commit these)
+.env
+.env.local
+.env.*.local
 **/appsettings.Production.json
 **/appsettings.Staging.json
+**/appsettings.Local.json
+**/secrets.json
+**/*secrets*.json
 *.pfx
 *.key
 *.pem
+*.p12
+*.cer
 
 ## Volumes
 sqlserver-data/

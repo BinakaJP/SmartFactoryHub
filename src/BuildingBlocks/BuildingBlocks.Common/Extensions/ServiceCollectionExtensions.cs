@@ -13,12 +13,16 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// Registers the RabbitMQ event bus as a singleton.
     /// </summary>
-    public static IServiceCollection AddRabbitMqEventBus(this IServiceCollection services, string hostName = "localhost")
+    public static IServiceCollection AddRabbitMqEventBus(
+        this IServiceCollection services,
+        string hostName = "localhost",
+        string userName = "guest",
+        string password = "guest")
     {
         services.AddSingleton<IEventBus>(sp =>
         {
             var logger = sp.GetRequiredService<ILogger<RabbitMqEventBus>>();
-            return new RabbitMqEventBus(logger, hostName);
+            return new RabbitMqEventBus(logger, hostName, userName, password);
         });
 
         return services;

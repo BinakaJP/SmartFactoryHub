@@ -8,7 +8,7 @@ services:
     platform: linux/amd64      # SQL Server requires x86 emulation on Apple Silicon
     container_name: smartfactory-sqlserver
     environment:
-      SA_PASSWORD: "YourStrong!Passw0rd"
+      SA_PASSWORD: "${SA_PASSWORD}"
       ACCEPT_EULA: "Y"
       MSSQL_PID: "Developer"
     ports:
@@ -18,7 +18,7 @@ services:
     networks:
       - smartfactory
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong!Passw0rd' -C -Q 'SELECT 1' || exit 1"]
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "${SA_PASSWORD}" -C -Q 'SELECT 1' || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 15
@@ -31,8 +31,8 @@ services:
       - "5672:5672"     # AMQP
       - "15672:15672"   # Management UI
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASS}"
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     networks:
@@ -63,8 +63,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD}"
       GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/service-health.json
     volumes:
       - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -109,8 +109,10 @@ services:
       - "5001:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__EquipmentDb=Server=sqlserver,1433;Database=SmartFactory_Equipment;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+      - ConnectionStrings__EquipmentDb=Server=sqlserver,1433;Database=SmartFactory_Equipment;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
       - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=${RABBITMQ_USER}
+      - RabbitMQ__Password=${RABBITMQ_PASS}
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -128,8 +130,10 @@ services:
       - "5002:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__MetricsDb=Server=sqlserver,1433;Database=SmartFactory_Metrics;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+      - ConnectionStrings__MetricsDb=Server=sqlserver,1433;Database=SmartFactory_Metrics;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
       - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=${RABBITMQ_USER}
+      - RabbitMQ__Password=${RABBITMQ_PASS}
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -147,8 +151,10 @@ services:
       - "5003:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__AlertDb=Server=sqlserver,1433;Database=SmartFactory_Alerts;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+      - ConnectionStrings__AlertDb=Server=sqlserver,1433;Database=SmartFactory_Alerts;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
       - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=${RABBITMQ_USER}
+      - RabbitMQ__Password=${RABBITMQ_PASS}
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -166,8 +172,10 @@ services:
       - "5004:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__NotificationDb=Server=sqlserver,1433;Database=SmartFactory_Notifications;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+      - ConnectionStrings__NotificationDb=Server=sqlserver,1433;Database=SmartFactory_Notifications;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
       - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=${RABBITMQ_USER}
+      - RabbitMQ__Password=${RABBITMQ_PASS}
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -185,8 +193,8 @@ services:
       - "5005:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__IdentityDb=Server=sqlserver,1433;Database=SmartFactory_Identity;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
-      - Jwt__SecretKey=SmartFactory_SuperSecret_JWT_Key_2026_MustBe32Chars!
+      - ConnectionStrings__IdentityDb=Server=sqlserver,1433;Database=SmartFactory_Identity;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
+      - Jwt__SecretKey=${JWT_SECRET_KEY}
       - Jwt__Issuer=SmartFactoryHub
       - Jwt__Audience=SmartFactoryHub
       - Jwt__ExpiryMinutes=480
