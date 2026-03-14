@@ -7,6 +7,8 @@ public interface INotificationService
 {
     Task HandleAlertTriggeredAsync(AlertTriggeredEvent evt);
     Task HandleEquipmentStatusChangedAsync(EquipmentStatusChangedEvent evt);
+    Task HandleAnomalyDetectedAsync(AnomalyDetectedEvent evt);
+    Task HandleMaintenancePredictedAsync(MaintenancePredictedEvent evt);
     Task<IEnumerable<NotificationDto>> GetRecentAsync(int count = 50);
     Task<NotificationSummaryDto> GetSummaryAsync();
     Task<bool> MarkAsReadAsync(Guid id);

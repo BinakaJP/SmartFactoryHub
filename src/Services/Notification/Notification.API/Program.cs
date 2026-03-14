@@ -28,6 +28,8 @@ builder.Services.AddRabbitMqEventBus(rabbitHost, rabbitUser, rabbitPass);
 // Background consumers — listen for events from RabbitMQ
 builder.Services.AddHostedService<AlertTriggeredConsumer>();
 builder.Services.AddHostedService<EquipmentStatusChangedConsumer>();
+builder.Services.AddHostedService<AnomalyDetectedConsumer>();
+builder.Services.AddHostedService<MaintenancePredictedConsumer>();
 
 // SignalR — real-time push to Angular
 builder.Services.AddSignalR();

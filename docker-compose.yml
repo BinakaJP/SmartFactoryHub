@@ -204,6 +204,30 @@ services:
     networks:
       - smartfactory
 
+  analytics-api:
+    build:
+      context: .
+      dockerfile: src/Services/Analytics/Analytics.API/Dockerfile
+    container_name: smartfactory-analytics-api
+    ports:
+      - "5006:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__AnalyticsDb=Server=sqlserver,1433;Database=SmartFactory_Analytics;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=${RABBITMQ_USER}
+      - RabbitMQ__Password=${RABBITMQ_PASS}
+      - ServiceUrls__MetricsApi=http://metrics-api:8080
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      metrics-api:
+        condition: service_started
+    networks:
+      - smartfactory
+
   simulator:
     build:
       context: .

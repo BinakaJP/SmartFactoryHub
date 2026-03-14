@@ -82,6 +82,58 @@ public class NotificationService : INotificationService
             await _hubContext.Clients.Group("EquipmentDown").SendAsync("ReceiveEquipmentAlert", dto);
     }
 
+    public async Task HandleAnomalyDetectedAsync(AnomalyDetectedEvent evt)
+    {
+        var log = new NotificationLog
+        {
+            NotificationType = "Anomaly",
+            EquipmentId      = evt.EquipmentId,
+            EquipmentName    = evt.EquipmentName,
+            Message          = $"{evt.EquipmentName}: {evt.MetricType} anomaly detected " +
+                               $"({evt.Severity}) — value {evt.Value:F2}, expected ~{evt.ExpectedValue:F2} " +
+                               $"({evt.DeviationPercent:F1}% deviation, method: {evt.Method})",
+            Severity         = evt.Severity,
+            Channels         = "SignalR"
+        };
+
+        _db.Notifications.Add(log);
+        await _db.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Anomaly notification — Equipment: {EquipmentId}, Metric: {Metric}, Severity: {Severity}",
+            evt.EquipmentId, evt.MetricType, evt.Severity);
+
+        var dto = ToDto(log);
+        await _hubContext.Clients.All.SendAsync("ReceiveNotification", dto);
+        await _hubContext.Clients.Group(evt.Severity).SendAsync("ReceiveAnomaly", dto);
+    }
+
+    public async Task HandleMaintenancePredictedAsync(MaintenancePredictedEvent evt)
+    {
+        var log = new NotificationLog
+        {
+            NotificationType = "Maintenance",
+            EquipmentId      = evt.EquipmentId,
+            EquipmentName    = evt.EquipmentName,
+            Message          = $"{evt.EquipmentName}: maintenance predicted in ~{evt.EstimatedDaysToMaintenance} day(s) " +
+                               $"(health: {evt.HealthScore:F1}%, severity: {evt.Severity}). " +
+                               $"Action: {evt.RecommendedAction}",
+            Severity         = evt.Severity,
+            Channels         = "SignalR"
+        };
+
+        _db.Notifications.Add(log);
+        await _db.SaveChangesAsync();
+
+        _logger.LogWarning(
+            "Maintenance notification — Equipment: {EquipmentId}, Health: {Score:F1}%, Days: {Days}, Severity: {Severity}",
+            evt.EquipmentId, evt.HealthScore, evt.EstimatedDaysToMaintenance, evt.Severity);
+
+        var dto = ToDto(log);
+        await _hubContext.Clients.All.SendAsync("ReceiveNotification", dto);
+        await _hubContext.Clients.Group("Maintenance").SendAsync("ReceiveMaintenance", dto);
+    }
+
     public async Task<IEnumerable<NotificationDto>> GetRecentAsync(int count = 50)
     {
         var notifications = await _db.Notifications
