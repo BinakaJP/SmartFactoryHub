@@ -228,6 +228,36 @@ services:
     networks:
       - smartfactory
 
+  chatbot-api:
+    build:
+      context: .
+      dockerfile: src/Services/Chatbot/Chatbot.API/Dockerfile
+    container_name: smartfactory-chatbot-api
+    ports:
+      - "5007:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - AiProvider=${AI_PROVIDER:-None}
+      - AzureOpenAI__Endpoint=${AZURE_OPENAI_ENDPOINT:-}
+      - AzureOpenAI__ApiKey=${AZURE_OPENAI_API_KEY:-}
+      - AzureOpenAI__DeploymentName=${AZURE_OPENAI_DEPLOYMENT:-gpt-4o}
+      - OpenAI__ApiKey=${OPENAI_API_KEY:-}
+      - ServiceUrls__EquipmentApi=http://equipment-api:8080
+      - ServiceUrls__MetricsApi=http://metrics-api:8080
+      - ServiceUrls__AlertApi=http://alert-api:8080
+      - ServiceUrls__AnalyticsApi=http://analytics-api:8080
+    depends_on:
+      equipment-api:
+        condition: service_started
+      metrics-api:
+        condition: service_started
+      alert-api:
+        condition: service_started
+      analytics-api:
+        condition: service_started
+    networks:
+      - smartfactory
+
   simulator:
     build:
       context: .
