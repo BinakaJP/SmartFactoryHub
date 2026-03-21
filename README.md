@@ -1,6 +1,6 @@
 # SmartFactory Hub
 
-A cloud-native **industrial IoT monitoring platform** built with .NET 8 microservices. Real-time equipment telemetry flows through a RabbitMQ event bus, is persisted in SQL Server, and is visualised in Grafana dashboards powered by Prometheus metrics. An embedded analytics engine performs continuous anomaly detection and predictive maintenance estimation using Z-Score, EWMA, and Rate-of-Change algorithms.
+A cloud-native **industrial IoT monitoring platform** built with .NET 8 microservices. Real-time equipment telemetry flows through a RabbitMQ event bus, is persisted in SQL Server, and is visualised in Grafana dashboards powered by Prometheus metrics. An embedded analytics engine performs continuous anomaly detection and predictive maintenance estimation using Z-Score, EWMA, and Rate-of-Change algorithms. An AI chatbot backed by Microsoft Semantic Kernel lets engineers query the entire factory in plain English using LLM function calling.
 
 ---
 
@@ -10,15 +10,15 @@ A cloud-native **industrial IoT monitoring platform** built with .NET 8 microser
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                      API Gateway (YARP)  :5100                           │
 │  /api/equipment  /api/metrics  /api/alerts  /api/notifications           │
-│  /api/analytics  /api/auth  /api/users  /hubs (SignalR)                  │
+│  /api/analytics  /api/chat  /api/auth  /api/users  /hubs (SignalR)       │
 └──────┬──────────┬──────────┬──────────┬──────────┬──────────┬────────────┘
        │          │          │          │          │          │
-  Equipment   Metrics    Alert     Notification  Identity  Analytics
-    API         API       API         API          API       API
-   :5001       :5002     :5003       :5004        :5005     :5006
-       │          │          │          │                      │
-       └──────────┴──────────┴──────────┴──────────────────────┘
-                                  │
+  Equipment   Metrics    Alert     Notification  Identity  Analytics  Chatbot
+    API         API       API         API          API       API       API
+   :5001       :5002     :5003       :5004        :5005     :5006     :5007
+       │          │          │          │                      │         │
+       └──────────┴──────────┴──────────┴──────────────────────┘         │
+                                  │                               (HTTP to peers)
                          RabbitMQ (topic exchange)
                          smartfactory_events
                                   │
@@ -48,6 +48,7 @@ A cloud-native **industrial IoT monitoring platform** built with .NET 8 microser
 | **Notification.API** | 5004 | SignalR real-time push to browser clients |
 | **Identity.API** | 5005 | JWT authentication, RBAC (Admin / Engineer / Operator / Viewer) |
 | **Analytics.API** | 5006 | Anomaly detection (Z-Score + EWMA + Rate-of-Change), health scoring, predictive maintenance RUL |
+| **Chatbot.API** | 5007 | AI conversational interface — Semantic Kernel function calling to all factory services |
 | **Simulator** | — | Generates realistic equipment telemetry every 10 s |
 
 ### Infrastructure
@@ -87,7 +88,7 @@ cp .env.example .env
 docker compose up --build -d
 ```
 
-All 12 containers start in dependency order. SQL Server takes ~60 s on first run.
+All 13 containers start in dependency order. SQL Server takes ~60 s on first run.
 
 ### 3 — Verify everything is healthy
 
@@ -98,6 +99,7 @@ curl http://localhost:5003/health   # Alert.API        → Healthy
 curl http://localhost:5004/health   # Notification.API → Healthy
 curl http://localhost:5005/health   # Identity.API     → Healthy
 curl http://localhost:5006/health   # Analytics.API    → Healthy
+curl http://localhost:5007/health   # Chatbot.API      → Healthy
 curl http://localhost:5100/health   # API Gateway      → Healthy
 ```
 
@@ -115,6 +117,7 @@ curl http://localhost:5100/health   # API Gateway      → Healthy
 | Notification API Swagger | http://localhost:5004/swagger | — |
 | Identity API Swagger | http://localhost:5005/swagger | — |
 | Analytics API Swagger | http://localhost:5006/swagger | — |
+| Chatbot API Swagger | http://localhost:5007/swagger | — |
 
 ---
 
@@ -179,6 +182,89 @@ GET   /api/analytics/health/{equipmentId}        # Single equipment health + RUL
 GET   /api/analytics/maintenance/schedule        # Maintenance schedule ordered by urgency
 GET   /api/analytics/dashboard                   # Fleet overview: anomaly counts + avg health
 ```
+
+---
+
+## AI Factory Chatbot
+
+Chatbot.API provides a natural-language interface to all factory data. The LLM (Azure OpenAI or OpenAI) decides which internal service APIs to call based on the user's question, executes the calls, and formulates a human-readable response.
+
+### Example interactions
+
+```
+"What is the current status of the CNC milling machine?"
+→ calls Equipment.GetEquipmentByCode("CNC-001")
+
+"Which equipment needs maintenance soonest?"
+→ calls Analytics.GetMaintenanceSchedule()
+
+"Are there any critical alerts right now?"
+→ calls Alerts.GetActiveAlerts(severity="Critical")
+
+"Acknowledge the vibration alert on CNC-001 for me."
+→ calls Alerts.AcknowledgeAlert(alertId=..., acknowledgedBy=...)
+```
+
+### Plugins
+
+| Plugin | Functions | Internal service |
+|---|---|---|
+| **EquipmentPlugin** | GetEquipmentList, GetEquipmentByCode, GetEquipmentStatusSummary, UpdateEquipmentStatus | Equipment.API |
+| **MetricsPlugin** | GetLatestMetrics, GetMetricAggregation, GetDashboardSummary | Metrics.API |
+| **AlertPlugin** | GetActiveAlerts, GetAlertSummary, AcknowledgeAlert | Alert.API |
+| **AnalyticsPlugin** | GetEquipmentHealth, GetAnomalies, GetMaintenanceSchedule | Analytics.API |
+
+### Chat API
+
+```bash
+# Start a new conversation
+curl -X POST http://localhost:5007/api/chat/message \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What equipment is currently running?"}'
+
+# Continue an existing session
+curl -X POST http://localhost:5007/api/chat/message \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Show me the health scores for those.", "sessionId": "<id from previous response>"}'
+
+# Get session history
+curl http://localhost:5007/api/chat/session/<sessionId>/history
+
+# Delete a session
+curl -X DELETE http://localhost:5007/api/chat/session/<sessionId>
+```
+
+Response shape:
+
+```json
+{
+  "sessionId": "b3c4d5e6-...",
+  "reply": "There are currently 3 machines running: CNC-001, CONV-001, ROB-001...",
+  "toolsUsed": ["Equipment.GetEquipmentList"],
+  "timestamp": "2026-03-20T10:15:00Z"
+}
+```
+
+### Configuration
+
+By default, `AiProvider=None` — the service starts and returns a "not configured" message. To activate the LLM:
+
+```bash
+# In .env
+AI_PROVIDER=AzureOpenAI
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_OPENAI_API_KEY=your-key
+AZURE_OPENAI_DEPLOYMENT=gpt-4o   # optional, defaults to gpt-4o
+```
+
+Or for OpenAI directly:
+
+```bash
+AI_PROVIDER=OpenAI
+OPENAI_API_KEY=sk-...
+```
+
+Restart `chatbot-api` after updating `.env`.
 
 ---
 
@@ -267,15 +353,21 @@ SmartFactoryHub/
 │       ├── Alert/Alert.API/
 │       ├── Notification/Notification.API/
 │       ├── Identity/Identity.API/
-│       ├── Analytics/Analytics.API/        # Phase 3: anomaly detection + predictive maintenance
+│       ├── Analytics/Analytics.API/        # Phase 3a: anomaly detection + predictive maintenance
 │       │   ├── Core/                       #   AnalyticsEngine (singleton), CircularBuffer<T>
 │       │   ├── Consumers/                  #   MetricRecordedConsumer
 │       │   ├── Controllers/                #   AnalyticsController
 │       │   ├── Data/                       #   AnalyticsDbContext
 │       │   ├── Dtos/
-│       │   ├── Models/                     #   AnomalyRecord
+│       │   ├── Models/                     #   AnomalyRecord, MaintenancePrediction
 │       │   ├── Services/                   #   IAnalyticsService, AnalyticsService
 │       │   └── Workers/                    #   MetricsSeedWorker (startup warm-up)
+│       ├── Chatbot/Chatbot.API/            # Phase 3b: Semantic Kernel AI chatbot
+│       │   ├── Controllers/                #   ChatController
+│       │   ├── Dtos/                       #   SendMessageRequest/Response, SessionHistoryResponse
+│       │   ├── Models/                     #   ChatSession
+│       │   ├── Plugins/                    #   EquipmentPlugin, MetricsPlugin, AlertPlugin, AnalyticsPlugin
+│       │   └── Services/                   #   ISessionManager, SessionManager, IChatService, ChatService
 │       └── Simulator/Simulator.Service/
 ├── tests/
 │   ├── Unit/
@@ -291,7 +383,7 @@ SmartFactoryHub/
 │       └── dashboards/
 │           ├── service-health.json
 │           └── equipment-metrics.json
-├── docker-compose.yml                      # Full stack definition (12 containers)
+├── docker-compose.yml                      # Full stack definition (13 containers)
 ├── .env.example                            # Secret template (committed)
 └── .env                                    # Local secrets (GITIGNORED)
 ```
@@ -338,8 +430,8 @@ For production deployments use a dedicated secrets manager (Azure Key Vault, AWS
 | Phase 2 | ✅ Complete | Alert.API · Notification.API (SignalR) · Identity.API (JWT + RBAC) |
 | Phase 2b | ✅ Complete | Full test suite — 109 tests (unit + integration via WebApplicationFactory) |
 | Phase 3a | ✅ Complete | Analytics.API — Z-Score, EWMA, Rate-of-Change anomaly detection + predictive maintenance RUL |
-| Phase 3b | 🔜 Planned | AI Factory Chatbot (Semantic Kernel + Azure OpenAI function-calling) |
-| Phase 4 | 🔜 Planned | Angular 17+ SPA (real-time dashboard consuming SignalR + REST) |
+| Phase 3b | ✅ Complete | AI Factory Chatbot — Semantic Kernel + Azure OpenAI/OpenAI function-calling, 4 plugins, in-memory sessions |
+| Phase 4 | 🔜 Planned | Angular 17+ SPA (real-time dashboard, SignalR alerts, embedded chat widget) |
 | Phase 5 | 🔜 Planned | GitHub Actions CI/CD · AKS deployment |
 | Phase 6 | 🔜 Planned | EF Migrations · OpenTelemetry · Azure Key Vault · Kubernetes HPA |
 
@@ -357,3 +449,7 @@ For production deployments use a dedicated secrets manager (Azure Key Vault, AWS
 - **MetricsSeedWorker**: on startup, calls `GET /api/Metrics/equipment/{id}/latest?count=200` for each configured equipment ID and feeds the results into `AnalyticsEngine.SeedMetric()`. This pre-warms rolling windows so anomaly detection starts working immediately rather than waiting for 15+ live readings.
 - **Integration tests with InMemory EF Core**: `Guid.NewGuid()` for the database name must be captured *outside* the `AddDbContext` lambda. If computed inside the lambda, each DI scope creates a different database instance — HTTP requests see an empty database even after the test has seeded data.
 - **`ExecuteUpdateAsync` / `ExecuteDeleteAsync`**: EF Core bulk operations require a relational provider. Two `NotificationService.MarkAllAsReadAsync()` tests are skipped with `[Fact(Skip = "...")]` when running against the InMemory provider.
+- **Chatbot.API has no database and no RabbitMQ**: sessions live in a `ConcurrentDictionary` singleton, auto-purged after 30 min. The service is independently deployable and scalable (though sessions would need Redis for multi-instance deployments).
+- **Semantic Kernel plugin registration**: plugins must be added to `kernel.Plugins` inside the `AddSingleton(sp => { ... })` factory lambda, using `sp.GetRequiredService<T>()`. The `Kernel` singleton is fully configured (with all plugins) before it is first resolved.
+- **`FunctionChoiceBehavior.Auto()` requires `OpenAIPromptExecutionSettings`**: this is in `Microsoft.SemanticKernel.Connectors.OpenAI`, not the base `PromptExecutionSettings` class.
+- **Graceful degradation (`AiProvider=None`)**: the chatbot always starts and health-checks cleanly. It only returns a "not configured" message if a user actually sends a chat message. No crash on missing credentials.
