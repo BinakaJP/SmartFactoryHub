@@ -1,0 +1,13 @@
+{
+  "/api": {
+    "target": "http://localhost:5100",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/hubs": {
+    "target": "http://localhost:5004",
+    "secure": false,
+    "changeOrigin": true,
+    "ws": true
+  }
+}
